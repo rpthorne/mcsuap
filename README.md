@@ -1,18 +1,22 @@
 # mcsuap
-a MineCraft Server Updater and Archiver in Python
+a MineCraft Server Updater and Archiver in Python v0.1
 
-Using this program
+## Using this program
 
-reccommended requirements:
+### reccommended requirements:
   Python 3.6.3 or better
   Python is included in your PATH variable  
-  
-Copy the file into your minecraft server folder (where the .jar file is located)
-run the execute command
-  python mcsuap.py
+
+### install
+1. Copy the file into your minecraft server folder (where the .jar file is located)
+1. run the execute command
+~~~~~~~~~~~~~~~~
+python mcsuap.py
+~~~~~~~~~~~~~~~~
 
 this will update your server.jar to the latest version if it is not already there
 
+### additional options
 there are additional options that you can specify:
   -h, --help                                show this help message and exit
   
@@ -32,5 +36,6 @@ there are additional options that you can specify:
   -d TARGET_DIRECTORY,
       --target-directory TARGET_DIRECTORY   choose a directory to look for files that isnt in the
                                             current working directory
-                                            
-Finally, this is distributed under the MIT license.
+
+## License
+This is distributed under the MIT license.

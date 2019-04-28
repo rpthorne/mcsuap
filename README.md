@@ -4,8 +4,8 @@ a MineCraft Server Updater and Archiver in Python v0.1
 ## Using this program
 
 ### reccommended requirements:
-  Python 3.6.3 or better
-  Python is included in your PATH variable  
+* Python 3.6.3 or better
+* Python is included in your PATH variable  
 
 ### install
 1. Copy the file into your minecraft server folder (where the .jar file is located)

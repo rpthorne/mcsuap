@@ -1,11 +1,13 @@
 #####################################################################
 # A python script for updating and archiving vanilla minecraft servers
 # Written by Ryan Thorne
-# date 4.27.19
+# date 5.1.19
 # ver 0.1
 #
 #
-# python is distributed and owned by Python Software Foundation
+# Python is distributed and owned by Python Software Foundation
+# Minecraft is distributed and owned by Mojang
+#
 # this code is distributed under the MIT license 
 # have fun modifying it!
 #
@@ -58,6 +60,8 @@ parser.add_argument('-t','--test', action='store_true', dest='TEST_SHA', help='c
 parser.add_argument('-j','--jar', default='server.jar', dest='SERVER_FILENAME', help='specify a filename for the servers jar file, defaults to server.jar')
 parser.add_argument('-f','--force', action='store_true', dest='FORCE', help='replace the server file, even if its is the same version')
 parser.add_argument('-d','--target-directory', default='0', dest='TARGET_DIRECTORY', help='choose a directory to look for files that isnt in the current working directory')
+parser.add_argument('-r','--release', action='store_true', dest='RELEASE', help='use the latest snapshot version instead of the latest stable release')
+parser.add_argument('-i','--install', action='store_true', dest='INSTALL', help='unpack certain files for the MCSUAP_manifest folder so the program can use them in normal use')
 #parser.add_argumant('--archive-dated', default='0', dest='ARCHIVE_DIRECTORY', help='backup files listed in MCSUAP_manifest to a compressed file with a name corresponding to the date created')
 
 args = parser.parse_args()
@@ -76,16 +80,24 @@ except FileExistsError: #do nothing, we just need this directory to exist
 with tempfile.TemporaryDirectory() as temp_dir:
 
 	#part 1 archiver
+	#first we look into the archive folder to determine which files to backup
 	
+	#next we build the backup file
+	
+	#name and place it
 
 	#end archiver
 
 	#part 2 updater
+	
 	versions_manifest_json = get_manifest_json('https://launchermeta.mojang.com/mc/game/version_manifest.json', manifest_versions_filename, args.PULL)
 
 	#now we have the version manifest file, we want *our* versions manifest file
 	if args.VERSION == '0':
-		args.VERSION = versions_manifest_json['latest']['release']
+		if args.RELEASE:
+			args.VERSION = versions_manifest_json['latest']['snapshot']
+		else:
+			args.VERSION = versions_manifest_json['latest']['release']
 
 	found_manifest = False
 	for i_ver in versions_manifest_json['versions']:
@@ -107,10 +119,11 @@ with tempfile.TemporaryDirectory() as temp_dir:
 			print('versions are same')
 		else:
 			update_flag = True	
+		local_jar_file.close()
 	except FileNotFoundError:
 		update_flag = True
 	
-	#download a new jar file if sha doesnot match or force flag is set
+	#download a new jar file if sha does not match or force flag is set
 	if update_flag and not args.TEST_SHA:
 		jar_web_request = urllib.request.urlopen(package_manifest_file['downloads']['server']['url']) 
 		server_file = os.path.join(temp_dir, args.SERVER_FILENAME)

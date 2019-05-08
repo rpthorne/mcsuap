@@ -2,7 +2,7 @@
 # A python script for updating and archiving vanilla minecraft servers
 # Written by Ryan Thorne
 # date 5.1.19
-# ver 0.1
+# ver 0.2
 #
 #
 # Python is distributed and owned by Python Software Foundation
@@ -30,10 +30,8 @@ import hashlib
 import datetime
 from pathlib import Path
 
+version_info = 'mcsuap version 0.2'
 
-
-manifest_versions_filename = Path('minecraft_version_info.json')
-manifest_package_filename = Path('minecraft_package.json')
 
 #path information
 #the directory which represents where actions are to be taken in
@@ -43,6 +41,9 @@ my_d = Path.cwd()
 archive_output_filename = Path.cwd()
 server_filename = Path('Server.jar')
 manifest_dir = my_d / Path('MCSUAP_manifest')
+manifest_versions_filename = Path('minecraft_version_info.json')
+manifest_package_filename = Path('minecraft_package.json')
+
 
 def get_manifest_json(req_url, req_filename, force):
 	#we will try to read from an already available copy of the manifest data unless forced to pull from mojang
@@ -68,44 +69,49 @@ def get_manifest_json(req_url, req_filename, force):
 
 #archive directory with given name
 def archive_fileset(file_location_path, backup_location_path, name):
-	archive = shutil.make_archive(name, 'zip', file_location_path)
-	shutil.move(archive, backup_location_path, copy_function=shutil.copy2())
-
-def setup()
-	try:
-		os.mkdir(manifest_dir)
-	except FileExistsError: #do nothing, we just need this directory to exist
-		pass
-	versions_manifest_json = get_manifest_json('https://launchermeta.mojang.com/mc/game/version_manifest.json', manifest_versions_filename, True)
+	with tempfile.TemporaryDirectory() as temp_arc_dir:
+		archive = shutil.make_archive(temp_arc_dir / Path(name), 'zip', file_location_path)
+		shutil.move(archive, backup_location_path)
 
 	
 #parse arguments to the system
 parser = argparse.ArgumentParser(description='Minecraft server updater and archiver in python')
+parser.add_argument('-i','--install', action='store_true', dest='INSTALL', help='unpack certain files for the MCSUAP_manifest folder so the program can use them in normal use')
 parser.add_argument('-p','--pull', action='store_true', dest='PULL', help='force read from mojang for the manifest files')
 parser.add_argument('-v','--version', default='0',dest='VERSION', help='specify a unique version of minecraft to change to')
 parser.add_argument('-t','--test', action='store_true', dest='TEST_SHA', help='checks manifest sha against current server files sha, do not replace any file')
 parser.add_argument('-j','--jar', default='0', dest='SERVER_FILENAME', help='specify a filename for the servers jar file, defaults to server.jar')
 parser.add_argument('-f','--force', action='store_true', dest='FORCE', help='replace the server file, even if its is the same version')
-#parser.add_argument('-d','--target-directory', default='0', dest='TARGET_DIRECTORY', help='choose a directory to look for files that isnt in the current working directory')
+parser.add_argument('-d','--target-directory', default='0', dest='TARGET_DIRECTORY', help='choose a directory to look for files that isnt in the current working directory')
 parser.add_argument('-s', '--snapshot', action='store_true', dest='SNAPSHOT', help='use the latest snapshot version instead of the latest stable release')
-parser.add_argument('-i','--install', action='store_true', dest='INSTALL', help='unpack certain files for the MCSUAP_manifest folder so the program can use them in normal use')
+parser.add_argument('-V', 'version', action='store_true', dest='DISP_VERSION', help='display version information, quit')
+parser.add_argument('-u', '--no-update', action='store_true', dest='NO_UPDATE', help='do not run updater at all, use this only with archiving')
 parser.add_argument('--archive-dated', action='store_true', dest='ARCHIVE_DIRECTORY', help='backup files listed in MCSUAP_manifest to a compressed file with a name corresponding to the date created')
-#parster.add_argument('--archive-target', default='0', dest='ARCHIVE_TARGET', help='choose a directory other than the current directory to be where the compressed file is placed')
+parser.add_argument('--archive-target', default='0', dest='ARCHIVE_TARGET', help='choose a directory other than the current directory to be where the compressed file is placed')
 
 args = parser.parse_args()
+
+if args.DISP_VERSION:
+	print(version_info)
+	quit()
+
 #replace with proper working directory as needed
 if not args.TARGET_DIRECTORY == '0':
 	working_d = Path(args.TARGET_DIRECTORY)
 	
 if not args.SERVER_FILENAME == '0':
-	server_filename = Path(args.SERVER_FILENAME))
+	server_filename = Path(args.SERVER_FILENAME)
 
 if not args.ARCHIVE_TARGET == '0':
 	archive_output_filename = Path(args.ARCHIVE_TARGET)
 	
 #perform installation if requested
 if args.INSTALL:
-	setup()
+	try:
+		os.mkdir(manifest_dir)
+	except FileExistsError: #do nothing, we just need this directory to exist
+		pass
+	get_manifest_json('https://launchermeta.mojang.com/mc/game/version_manifest.json', manifest_versions_filename, True)
 	quit()
 
 
@@ -126,7 +132,10 @@ with tempfile.TemporaryDirectory() as temp_dir:
 
 	
 	#part 2 updater
+	if args.NO_UPDATE:
+		quit()
 	
+	print ('starting updater')
 	versions_manifest_json = get_manifest_json('https://launchermeta.mojang.com/mc/game/version_manifest.json', manifest_versions_filename, args.PULL)
 
 	#now we have the version manifest file, we want *our* versions manifest file
@@ -145,26 +154,30 @@ with tempfile.TemporaryDirectory() as temp_dir:
 		print('unable to find target version, check the manifest file to ensure you are looing for a valid version')
 		quit()
 	
-	package_manifest_file_server = get_manifest_json(manifest_url, manifest_package_filename, args.PULL)['downloads']['server']
-	
+	package_manifest_file_server = get_manifest_json(manifest_url, manifest_package_filename, args.PULL)
+	if not package_manifest_file_server['id'] == args.VERSION:
+		package_manifest_file_server = get_manifest_json(manifest_url, manifest_package_filename, True)
+	package_manifest_file_server = package_manifest_file_server['downloads']['server']
 	#check to see if current file is same as what we want to put there
 	update_flag = args.FORCE
 	sha_local = hashlib.sha1()
 	try:
-		local_jar_file = open(args.SERVER_FILENAME, 'rb')
+		local_jar_file = open(server_filename, 'rb')
 		sha_local.update(local_jar_file.read())
 		if sha_local.hexdigest() == package_manifest_file_server['sha1']:
 			print('versions are same')
 		else:
+			print('version mismatch')
 			update_flag = True	
 		local_jar_file.close()
 	except FileNotFoundError:
+		print ('no file detected')
 		update_flag = True
 	
 	#download a new jar file if sha does not match or force flag is set
 	if update_flag and not args.TEST_SHA:
 		jar_web_request = urllib.request.urlopen(package_manifest_file_server['url']) 
-		server_file = os.path.join(temp_dir, args.SERVER_FILENAME)
+		server_file = os.path.join(temp_dir, server_filename)
 		new_jar_file = open(server_file, 'wb')
 		shutil.copyfileobj(jar_web_request, new_jar_file)
 		new_jar_file.close()

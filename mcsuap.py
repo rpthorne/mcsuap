@@ -84,7 +84,7 @@ parser.add_argument('-j','--jar', default='0', dest='SERVER_FILENAME', help='spe
 parser.add_argument('-f','--force', action='store_true', dest='FORCE', help='replace the server file, even if its is the same version')
 parser.add_argument('-d','--target-directory', default='0', dest='TARGET_DIRECTORY', help='choose a directory to look for files that isnt in the current working directory')
 parser.add_argument('-s', '--snapshot', action='store_true', dest='SNAPSHOT', help='use the latest snapshot version instead of the latest stable release')
-parser.add_argument('-V', 'version', action='store_true', dest='DISP_VERSION', help='display version information, quit')
+parser.add_argument('-V', '--info', action='store_true', dest='DISP_VERSION', help='display version information, quit')
 parser.add_argument('-u', '--no-update', action='store_true', dest='NO_UPDATE', help='do not run updater at all, use this only with archiving')
 parser.add_argument('--archive-dated', action='store_true', dest='ARCHIVE_DIRECTORY', help='backup files listed in MCSUAP_manifest to a compressed file with a name corresponding to the date created')
 parser.add_argument('--archive-target', default='0', dest='ARCHIVE_TARGET', help='choose a directory other than the current directory to be where the compressed file is placed')

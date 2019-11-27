@@ -37,10 +37,11 @@ version_info = 'mcsuap version 0.2'
 #the directory which represents where actions are to be taken in
 working_d = Path.cwd()
 #where the executable is invoked from
-my_d = Path.cwd()
-archive_output_filename = Path.cwd()
+my_directory = Path.cwd()
+archive_output_filename = Path(datetime.datetime.now().strftime('backupon%m.%d.%yat%H.%M'))
 server_filename = Path('Server.jar')
-manifest_dir = my_d / Path('MCSUAP_manifest')
+manifest_dir = my_directory / Path('MCSUAP_manifest')
+manifest_archiver_files = Path('backup_filenames')
 manifest_versions_filename = Path('minecraft_version_info.json')
 manifest_package_filename = Path('minecraft_package.json')
 
@@ -68,26 +69,30 @@ def get_manifest_json(req_url, req_filename, force):
 	
 
 #archive directory with given name
-def archive_fileset(file_location_path, backup_location_path, name):
-	with tempfile.TemporaryDirectory() as temp_arc_dir:
-		archive = shutil.make_archive(temp_arc_dir / Path(name), 'zip', file_location_path)
-		shutil.move(archive, backup_location_path)
-
+def archive_fileset(filename_list, backup_location_path, name):
+    try:
+        with zipfile.ZipFile(backup_location_path, mode='x') as arc_dir:
+            for i_file_path in filename_list:
+                arc_dir.write(i_file_path)
+            archive = shutil.make_archive(arc_dir , 'zip', file_location_path)
+            shutil.move(archive, name)
+    except Exception: #this is unhandleable for this script, if we cant archive, we should absolutely not be trying to update, crash the program
+        quit()
 	
 #parse arguments to the system
 parser = argparse.ArgumentParser(description='Minecraft server updater and archiver in python')
-parser.add_argument('-i','--install', action='store_true', dest='INSTALL', help='unpack certain files for the MCSUAP_manifest folder so the program can use them in normal use')
-parser.add_argument('-p','--pull', action='store_true', dest='PULL', help='force read from mojang for the manifest files')
+parser.add_argument('-i','--install', action='store_true', dest='INSTALL', help='unpack certain files for the MCSUAP_manifest folder so the program can use them')
 parser.add_argument('-v','--version', default='0',dest='VERSION', help='specify a unique version of minecraft to change to')
-parser.add_argument('-t','--test', action='store_true', dest='TEST_SHA', help='checks manifest sha against current server files sha, do not replace any file')
+parser.add_argument('-s', '--snapshot', action='store_true', dest='SNAPSHOT', help='use the latest snapshot version instead of the latest stable release')
 parser.add_argument('-j','--jar', default='0', dest='SERVER_FILENAME', help='specify a filename for the servers jar file, defaults to server.jar')
+parser.add_argument('-t','--test', action='store_true', dest='TEST_SHA', help='checks manifest sha against current server files sha, do not replace any file')
+parser.add_argument('-p','--pull', action='store_true', dest='PULL', help='force read from mojang for the manifest files')
 parser.add_argument('-f','--force', action='store_true', dest='FORCE', help='replace the server file, even if its is the same version')
 parser.add_argument('-d','--target-directory', default='0', dest='TARGET_DIRECTORY', help='choose a directory to look for files that isnt in the current working directory')
-parser.add_argument('-s', '--snapshot', action='store_true', dest='SNAPSHOT', help='use the latest snapshot version instead of the latest stable release')
-parser.add_argument('-V', '--info', action='store_true', dest='DISP_VERSION', help='display version information, quit')
-parser.add_argument('-u', '--no-update', action='store_true', dest='NO_UPDATE', help='do not run updater at all, use this only with archiving')
 parser.add_argument('--archive-dated', action='store_true', dest='ARCHIVE_DIRECTORY', help='backup files listed in MCSUAP_manifest to a compressed file with a name corresponding to the date created')
 parser.add_argument('--archive-target', default='0', dest='ARCHIVE_TARGET', help='choose a directory other than the current directory to be where the compressed file is placed')
+parser.add_argument('-u', '--no-update', action='store_true', dest='NO_UPDATE', help='do not run updater at all, use this only with archiving')
+parser.add_argument('-V', '--info', action='store_true', dest='DISP_VERSION', help='display version information, quit')
 
 args = parser.parse_args()
 
@@ -123,11 +128,26 @@ if not os.path.isdir(manifest_dir):
 #create processing directory for temporary files
 with tempfile.TemporaryDirectory() as temp_dir:
 
-	#begin archiver
-	event_time = datetime.datetime.now().strftime('backupon%m.%d.%yat%H.%M')
 
+	#begin archiver
 	if args.ARCHIVE_DIRECTORY:
-		archive_fileset(working_d, archive_output_filename, event_time)
+        print ('starting archiver')
+        try:
+            f_archive_filenames = open(Path(manifest_dir) / manifest_archiver_files, "r")
+            archive_filelist = f_archive_filenames.readlines()
+            f_archive_filenames.close()
+        except:
+            quit()
+            
+        archive_fileset_list = []
+        try:
+            for i_file in archive_filelist:
+                archive_fileset_list.append(Path(i_file.strip()).relativeize(archive_output_filename))
+        except ValueError:
+            print ('err: coul not make file from: ' + i_file)
+            quit()
+		archive_fileset(archive_filelist, archive_output_filename, event_time)
+        
 	#end archiver
 
 	
@@ -171,7 +191,7 @@ with tempfile.TemporaryDirectory() as temp_dir:
 			update_flag = True	
 		local_jar_file.close()
 	except FileNotFoundError:
-		print ('no file detected')
+		print ('no server application detected, downloading new one')
 		update_flag = True
 	
 	#download a new jar file if sha does not match or force flag is set

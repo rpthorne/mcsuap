@@ -1,5 +1,5 @@
 # mcsuap
-a MineCraft Server Updater and Archiver in Python v0.1
+a MineCraft Server Updater and Archiver in Python v 0.3
 
 ## Using this program
 
